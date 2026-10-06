@@ -1,18 +1,14 @@
-# Use an official lightweight Python image
 FROM python:3.10-slim
-
-# Set the working directory inside the container
 WORKDIR /app
-
-# Copy the requirements file and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# COPY the test script into the container
+COPY test_app.py .
 COPY app.py .
 
-# Expose the port Flask runs on
-EXPOSE 5000
+# RUN the tests during the build phase. If tests fail, Docker stops building!
+RUN pytest test_app.py
 
-# Run the Flask app (binding to 0.0.0.0 so external traffic can reach it)
+EXPOSE 5000
 CMD ["python", "app.py"]
