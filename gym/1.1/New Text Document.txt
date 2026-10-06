@@ -1,0 +1,59 @@
+import pytest
+from app import app, CLIENTS_DATABASE
+
+@pytest.fixture
+def client():
+    """Configures the Flask app for testing and clears the in-memory database."""
+    app.config['TESTING'] = True
+    CLIENTS_DATABASE.clear()  # Ensure database is empty before each test runs
+    with app.test_client() as client:
+        yield client
+
+def test_homepage_loads(client):
+    """Test 1: Verify the CRM main page loads with the correct version header."""
+    response = client.get('/')
+    assert response.status_code == 200
+    assert b"ACEest FUNCTIONAL FITNESS SYSTEM v2" in response.data
+
+def test_calorie_calculation_math(client):
+    """Test 2: Verify calorie math parameters compute factors precisely (80kg * 35 multiplier)."""
+    response = client.post('/process', data={
+        'name': 'Jay',
+        'age': '30',
+        'weight': '80',
+        'program': 'Muscle Gain (MG)',
+        'adherence': '75',
+        'notes': 'Bulking phase',
+        'action': 'refresh'
+    })
+    assert response.status_code == 200
+    # 80 kg * 35 multiplier = 2800 kcal
+    assert b"2800 kcal" in response.data
+
+def test_save_client_to_list_database(client):
+    """Test 3: Verify form data appends securely into the CRM list database."""
+    response = client.post('/process', data={
+        'name': 'Amit',
+        'age': '25',
+        'weight': '70',
+        'program': 'Fat Loss (FL)',
+        'adherence': '95',
+        'notes': 'First week done',
+        'action': 'save'
+    })
+    assert response.status_code == 200
+    assert b"Saved: Client Amit saved successfully." in response.data
+    # Confirm it actually saved to the list dictionary inside app.py
+    assert len(CLIENTS_DATABASE) == 1
+    assert CLIENTS_DATABASE[0]['name'] == 'Amit'
+
+def test_incomplete_field_validation(client):
+    """Test 4: Verify the app catches missing input parameters gracefully."""
+    response = client.post('/process', data={
+        'name': '',  # Empty name string violates input constraints
+        'program': 'Beginner (BG)',
+        'action': 'save'
+    })
+    assert response.status_code == 200
+    assert b"Incomplete: Please fill client name and program." in response.data
+    assert len(CLIENTS_DATABASE) == 0

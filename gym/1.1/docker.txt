@@ -1,0 +1,23 @@
+# Use an official lightweight Python runtime environment
+FROM python:3.10-slim
+
+# Create and set the internal container working directory
+WORKDIR /app
+
+# Copy the dependency index and install modules
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy your actual application logic and test script scripts
+COPY app.py .
+COPY test_app.py .
+
+# CRITICAL STEP: Run unit tests during the container build execution
+# If any test fails, Docker breaks the build loop here.
+RUN pytest test_app.py -v
+
+# Expose the application communication port
+EXPOSE 5000
+
+# Execute the application server bound to global routes
+CMD ["python", "app.py"]

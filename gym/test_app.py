@@ -3,34 +3,52 @@ from app import app
 
 @pytest.fixture
 def client():
-    """Configures the Flask app for testing mode and creates a test client."""
+    """Configures the Flask app environment for isolated pipeline integration checks."""
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
 
-def test_homepage_loads(client):
-    """Test 1: Verify the homepage loads successfully (Status Code 200)."""
+def test_homepage_loads_successfully(client):
+    """Test 1: Verify the premium dark theme base dashboard page loads (Status 200)."""
     response = client.get('/')
     assert response.status_code == 200
-    assert b"ACEest FUNCTIONAL FITNESS" in response.data
+    assert b"ACEest FUNCTIONAL FITNESS SYSTEM" in response.data
     assert b"Select a profile to view workout" in response.data
 
-def test_fat_loss_program_selection(client):
-    """Test 2: Verify selecting 'Fat Loss (FL)' returns the correct workout and diet details."""
-    response = client.post('/', data={'program': 'Fat Loss (FL)'})
+def test_dynamic_calorie_calculation_math(client):
+    """Test 2: Verify dynamic calorie factors evaluate exactly matching math parameters (80kg * 35 multiplier)."""
+    response = client.post('/', data={
+        'name': 'Jayalakshmi',
+        'age': '35',
+        'weight': '80',
+        'program': 'Muscle Gain (MG)',
+        'adherence': '80',
+        'action': 'refresh'  # Emulates picking a dropdown program menu selection
+    })
     assert response.status_code == 200
-    assert b"5x5 Back Squat + AMRAP" in response.data
-    assert b"Target: 2,000 kcal" in response.data
+    # 80 kg * 35 calorie_factor = 2800 kcal
+    assert b"2800 kcal" in response.data
+    assert b"Mon: Squat 5x5" in response.data
 
-def test_muscle_gain_program_selection(client):
-    """Test 3: Verify selecting 'Muscle Gain (MG)' returns the correct workout and diet details."""
-    response = client.post('/', data={'program': 'Muscle Gain (MG)'})
+def test_save_client_validation_success(client):
+    """Test 3: Verify form handles complete client profiles and displays success alerts."""
+    response = client.post('/', data={
+        'name': 'Deshpande',
+        'age': '24',
+        'weight': '65',
+        'program': 'Fat Loss (FL)',
+        'adherence': '95',
+        'action': 'save'
+    })
     assert response.status_code == 200
-    assert b"Squat 5x5" in response.data
-    assert b"Target: 3,200 kcal" in response.data
+    assert b"Saved: Client Deshpande saved successfully. Adherence: 95%" in response.data
 
-def test_invalid_program_selection(client):
-    """Test 4: Verify sending an invalid program does not crash the app."""
-    response = client.post('/', data={'program': 'NonExistentProgram'})
+def test_incomplete_field_validation_catch(client):
+    """Test 4: Verify field restrictions prevent missing inputs from creating a transaction."""
+    response = client.post('/', data={
+        'name': '',  # Empty name parameter violates programmatic validation limits
+        'program': 'Beginner (BG)',
+        'action': 'save'
+    })
     assert response.status_code == 200
-    assert b"Select a profile to view workout" in response.data
+    assert b"Incomplete: Please fill client name and program." in response.data

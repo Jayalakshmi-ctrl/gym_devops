@@ -1,0 +1,8 @@
+# 1. Clean out the old container build cached layer
+docker rm -f gym-app-container
+
+# 2. Build the updated version 2 image (Notice the dot at the end)
+docker build -t gym-app-v2:latest .
+
+# 3. Launch your shiny new interactive dashboard container!
+docker run -d -p 5000:5000 --name gym-app-v2-container gym-app-v2:latest

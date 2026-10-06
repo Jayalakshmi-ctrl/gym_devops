@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "gym-app-v2"
+        CONTAINER_NAME = "gym-app-v2-container"
+        APP_PORT = "5000"
+    }
+
+    stages {
+        stage('Sanity Check') {
+            steps {
+                echo 'Verifying application files inside your repository workspace...'
+                // Prints workspace contents to confirm app.py and configs exist
+                sh 'ls -la'
+            }
+        }
+
+        stage('Build & Test Container Image') {
+            steps {
+                echo 'Building updated Docker image... (This automatically runs the test_app.py suite)'
+                // Executes your Dockerfile. If pytest fails inside the Dockerfile, this stage turns RED.
+                sh "docker build -t ${IMAGE_NAME}:latest ."
+            }
+        }
+
+        stage('Deploy Production Instance') {
+            steps {
+                echo 'Deploying application to live production Docker port...'
+                
+                // 1. Force stop and remove old active containers running on port 5000
+                sh """
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+                """
+                
+                // 2. Launch your freshly compiled and tested image version
+                sh "docker run -d -p ${APP_PORT}:${APP_PORT} --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest"
+                echo "Success! Upgraded Dashboard v2 is live on port ${APP_PORT}."
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '============================================================'
+            echo '🎉 PIPELINE SUCCESSFUL: Version 2 is live and healthy!'
+            echo '============================================================'
+        }
+        failure {
+            echo '============================================================'
+            echo '❌ PIPELINE FAILED: Check the build logs to fix issues.'
+            echo '============================================================'
+        }
+    }
+}
